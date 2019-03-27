@@ -7,6 +7,8 @@ int relay2=11;
 int buzzer=13;
 bool r1;
 bool r2;
+bool z1;
+bool z2;
 
 char outpass1[4];
 char inpass1[4];
@@ -45,6 +47,21 @@ void setup(){
   pinMode(buzzer,OUTPUT);
   pinMode(relay1,OUTPUT);
   pinMode(relay2,OUTPUT);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  z1=0;
+  z2=0;
+
+  r1=EEPROM.read(3);
+  if(r1==1){
+    digitalWrite(relay1,LOW);
+    z1=1;
+  }
+  r2=EEPROM.read(4);
+  if(r2==1){
+    digitalWrite(relay2,LOW);
+    z2=1;
+  }
 
   cpass1 = EEPROM.read(1);
   if (cpass1==1) {
@@ -351,13 +368,13 @@ void LOGIN(){
 
 void INBOX1(){
   lcd.clear();
-  if(r1==0){
+  if(z1==1){
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
     delay(1000);
     LOGIN();
   }
-  else if(r1==1){
+  else if(z1==0){
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
     delay(1000);
@@ -367,13 +384,13 @@ void INBOX1(){
   
 void INBOX2(){
   lcd.clear();
-  if(r2==0){
+  if(z2==1){
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
     delay(1000);
     LOGIN();
   }
-  else if(r2==1){
+  else if(z2==0){
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
     delay(1000);
@@ -530,14 +547,14 @@ while(1){
 
 void OUTBOX1() {
   lcd.clear();
-  if(r1==1) {
+  if(z1==0) {
   lcd.setCursor(3,1);
   lcd.print("NOT AVAILABLE");
   delay(1000) ;
   LOGOUT() ;
  }
 
-  else if (r1==0) {
+  else if (z1==1) {
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
     delay(1000);
@@ -547,13 +564,13 @@ void OUTBOX1() {
 
 void OUTBOX2() {
   lcd.clear();
-  if(r2==1) {
+  if(z2==0) {
   lcd.setCursor(3,1);
   lcd.print("NOT AVAILABLE");
   delay(1000) ;
   LOGOUT() ;
  }
-  else if(r2==0) {
+  else if(z2==1) {
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
     delay(1000);
@@ -568,7 +585,8 @@ void loop(){
   
 void LOCK1(){
   digitalWrite(10,LOW);
-  r1=0;
+  r1=1;
+  z1=1;
   EEPROM.write(3, r1);
   lcd.clear();
   lcd.setCursor(5,1);
@@ -578,8 +596,9 @@ void LOCK1(){
 }
 void UNLOCK1(){
   digitalWrite(10,HIGH);
-  r1=1;
-  EEPROM.write(4, r2);
+  r1=0;
+  z1=0;
+  EEPROM.write(3, r1);
   lcd.clear();
   lcd.setCursor(5,1);
   lcd.print("THANK YOU");
@@ -590,7 +609,9 @@ void UNLOCK1(){
 
 void LOCK2(){
   digitalWrite(11,LOW);
-  r2=0;
+  r2=1;
+  z2=1;
+  EEPROM.write(4,r2);
   lcd.clear();
   lcd.setCursor(5,1);
   lcd.print("THANK YOU");
@@ -599,7 +620,9 @@ void LOCK2(){
 }
 void UNLOCK2(){
   digitalWrite(11,HIGH);
-  r2=1;
+  r2=0;
+  z2=0;
+  EEPROM.write(4,r2);
   lcd.clear();
   lcd.setCursor(5,1);
   lcd.print("THANK YOU");
