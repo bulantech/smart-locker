@@ -43,21 +43,27 @@ int t1 = 0;
 int t2 = 0;
 enum state_t {
   sNone,
-  sStart1, sStart2,
-  sLogin, sLogout,
+  sHomeDisplay, sHomeWaitKeyPress,
+  sMainMenuDisplay, sMainMenuWaitKeyPress,
+  sDelay,
+  sSelectSlotDisplay, sSelectSlotWaitKeyPress,
   sInbox1, sInbox2,
   sHr1, sHr2,
   sPay1, sPay2,
   sInpass1, sInpass2,
+  
+  sLogin, sLogout,  
+  sStart1, sStart2,  
+  sInpass1, sInpass2,
 };
-state_t pState;
-bool stateSuccess
+state_t pState=sHomeDisplay;
+state_t nextState;
 
 Keypad keypad_key = Keypad( makeKeymap(hexaKeys), row_pins, column_pins, rows, columns);
 
 Ticker timer1(printCounter1, 1000);
 Ticker timer2(printCounter2, 1000);
-Ticker timer3(gotoState, 500);
+Ticker timer3(delayTime, 500);
 
 void setup(){
   Serial.begin(9600);
@@ -86,81 +92,72 @@ void setup(){
   }
 
 //  timer1.start();
+//  timer2.start();  
 //  timer2.start();
-  
-  START1(); 
+//  START1(); 
 }
 
 void loop(){
 //  Serial.println("loop");
-//  delay(1000);
-//  timer1.update();
-//  timer2.update();
-}
-
-void printCounter1() {
-  Serial.print("Counter1 ");
-  Serial.println(timer1.counter());
-//  if(timer1.counter() >= 10) {
-//    timer1.stop();
-//    timer2.start();
-//  }
-}
-
-void printCounter2() {
-  Serial.print("Counter2 ");
-  Serial.println(timer2.counter());
-//  if(timer2.counter() >= 10) {
-//    timer2.stop();
-//    timer1.start();
-//  }
-}
-
-void updateTicker() {
   timer1.update();
   timer2.update();
   timer3.update();
+
+  processTask()
 }
 
-void gotoState() {
-  Serial.println("gotoState");
-  timer3.stop();
+void processTask() {
   switch(pState) {
-    case sStart1: START1(); break;
-    case sStart2: START2(); break;
-    case sLogin:  LOGIN();  break;
-    case sLogout: LOGOUT(); break;
-    case sInbox1: INBOX1(); break;
+    case sHomeDisplay:
+      START1();
+      pState = sHomeWaitKeyPress;
+      break;
+    case sHomeWaitKeyPress:
+      if(!(keypad_key.getKey()==NO_KEY)){
+        pState = sMainMenuDisplay;
+      }
+      break;
+    case sMainMenuDisplay:
+      START2();
+      pState = sMainMenuWaitKeyPress;
+      break;
+    case sMainMenuWaitKeyPress:
+      START2_WAIT();
+      break;
+    case sDelay:
+      //wait
+      break;
+    case sSelectSlotDisplay:
+      LOGIN();
+      pState = sSelectSlotWaitKeyPress;
+      break;
+    case sSelectSlotWaitKeyPress: LOGIN_WAIT(); break;
+    case sInbox1:mINBOX1(); break;
     case sInbox2: INBOX2(); break;
     case sHr1: HR1(); break;
     case sHr2: HR2(); break;
-    case sPay1: PAY1(); break;
+    case sPay1: PAY1(); break; , 
     case sPay2: PAY2(); break;
     case sInpass1: INPASS1(); break;
     case sInpass2: INPASS2(); break;
   }
 }
 
-void putItem1() {
-  lcd.setCursor(0,0);
-  lcd.print("PLEASE PUT YOUR ITEM");
-  lcd.setCursor(4,1);
-  lcd.print("INTO THE BOX");
-  lcd.setCursor(2,2);
-  lcd.print("WITHIN 30 SECOND");
-  delay(2000);
-  LOCK1();
+void printCounter1() {
+  Serial.print("Counter1 ");
+  Serial.println(timer1.counter());
 }
 
-void putItem1() {
-  lcd.setCursor(0,0);
-  lcd.print("PLEASE PUT YOUR ITEM");
-  lcd.setCursor(4,1);
-  lcd.print("INTO THE BOX");
-  lcd.setCursor(2,2);
-  lcd.print("WITHIN 30 SECOND");
-  delay(2000);
-  LOCK2();
+void printCounter2() {
+  Serial.print("Counter2 ");
+  Serial.println(timer2.counter());
+}
+
+void delayTime() {
+  Serial.print("delayTime ");
+  Serial.println(timer3.counter());
+  timer3.stop();
+  pState = nextState;
 }
 
 void INPASS1(){
@@ -372,22 +369,14 @@ void OUTPASS2(){
 
 void START1(){
   lcd.clear();
-  while(1){
-    if(!(keypad_key.getKey()==NO_KEY)){
-      START2();
-    }
-    else{
-      lcd.setCursor(5,0);  
-      lcd.print(":WELCOME:");
-      lcd.setCursor(4,1);
-      lcd.print("SMART LOCKER");
-      lcd.setCursor(2,2);
-      lcd.print("PRESS ANY TO START");
-      lcd.setCursor(0,3);
-      lcd.print("____________________");
-    }
-    updateTicker();
-  }
+  lcd.setCursor(5,0);  
+  lcd.print(":WELCOME:");
+  lcd.setCursor(4,1);
+  lcd.print("SMART LOCKER");
+  lcd.setCursor(2,2);
+  lcd.print("PRESS ANY TO START");
+  lcd.setCursor(0,3);
+  lcd.print("____________________");
 }
 
 void START2(){
@@ -398,38 +387,41 @@ void START2(){
   lcd.print("PRESS 2 TO LOGOUT");
   lcd.setCursor(2,2);
   lcd.print("PRESS 0 TO RETURN");
-  while(1){
-    if(keypad_key.getKey()=='1'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("LOGIN");
+}
+
+void START2_WAIT(){
+  if(keypad_key.getKey()=='1'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("LOGIN");
 //      delay(500);       
 //      LOGIN();
-      timer3.interval(500);
-      timer3.start();
-      pState = sLogin;
-    }
-    else if(keypad_key.getKey()=='2'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("LOGOUT");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sSelectSlotDisplay;
+  }
+  else if(keypad_key.getKey()=='2'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("LOGOUT");
 //      delay(500); 
 //      LOGOUT();
-      timer3.interval(500);
-      timer3.start();
-      pState = sLogout;
-    }
-    else if(keypad_key.getKey()=='0'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("RETURN");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sLogout;
+  }
+  else if(keypad_key.getKey()=='0'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("RETURN");
 //      delay(500); 
 //      START1();
-      timer3.interval(500);
-      timer3.start();
-      pState = sStart1;
-    }
-    updateTicker();
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sHomeDisplay;
   }
 }
 
@@ -439,39 +431,43 @@ void LOGIN(){
   lcd.print("CHOOSE EMPTY SLOT");
   lcd.setCursor(1,2);
   lcd.print("PRESS 0 TO RETURN");
-  while(1){
-    if(keypad_key.getKey()=='1'){
-      lcd.clear();
-      lcd.setCursor(8,1);
-      lcd.print("BOX1");
+}
+
+void LOGIN_WAIT(){
+  if(keypad_key.getKey()=='1'){
+    lcd.clear();
+    lcd.setCursor(8,1);
+    lcd.print("BOX1");
 //      delay(500); 
 //      INBOX1();
-      timer3.interval(500);
-      timer3.start();
-      pState = sInbox1;
-    }
-    else if(keypad_key.getKey()=='2'){
-      lcd.clear();
-      lcd.setCursor(8,1);
-      lcd.print("BOX2");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sInbox1;
+  }
+  else if(keypad_key.getKey()=='2'){
+    lcd.clear();
+    lcd.setCursor(8,1);
+    lcd.print("BOX2");
 //      delay(500); 
 //      INBOX2();
-      timer3.interval(500);
-      timer3.start();
-      pState = sInbox2;
-    }
-    else if(keypad_key.getKey()=='0'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("RETURN");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sInbox2;
+  }
+  else if(keypad_key.getKey()=='0'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("RETURN");
 //      delay(500); 
 //      START2();
-      timer3.interval(500);
-      timer3.start();
-      pState = sStart2;
-    }
-    updateTicker();
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sMainMenuDisplay;
   }
+
 }
 
 void INBOX1(){
@@ -483,7 +479,8 @@ void INBOX1(){
 //    LOGIN();
     timer3.interval(1000);
     timer3.start();
-    pState = sLogin;
+    pState = sDelay;
+    nextState = sMainMenuDisplay;
   }
   else if(r1==1){
     lcd.setCursor(5,1);
@@ -492,7 +489,9 @@ void INBOX1(){
 //    HR1();
     timer3.interval(1000);
     timer3.start();
-    pState = sHr1;
+    pState = sDelay;
+    nextState = sHr1;
+    HR_DISPLAY()
   }
 }
   
@@ -505,7 +504,8 @@ void INBOX2(){
 //    LOGIN();
     timer3.interval(1000);
     timer3.start();
-    pState = sLogin;
+    pState = sDelay;
+    nextState = sMainMenuDisplay;
   }
   else if(r2==1){
     lcd.setCursor(5,1);
@@ -514,11 +514,13 @@ void INBOX2(){
 //    HR2();
     timer3.interval(1000);
     timer3.start();
-    pState = sHr2;
+    pState = sDelay;
+    nextState = sHr2;
+    HR_DISPLAY()
   }
 }
 
-void HR1(){
+void HR_DISPLAY(){
   lcd.clear();
   lcd.setCursor(3,0);
   lcd.print("PLEASE CHOOSE");
@@ -528,88 +530,82 @@ void HR1(){
   lcd.print("1 OR 2");
   lcd.setCursor(1,3);
   lcd.print("PRESS 0 TO RETURN");
-  while(1){
-    if(keypad_key.getKey()=='1'){
-      hours11=1;
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("1 HOUR");
+}
+
+void HR1(){
+  if(keypad_key.getKey()=='1'){
+    hours11=1;
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("1 HOUR");
 //      delay(500); 
 //      PAY1();
-      timer3.interval(500);
-      timer3.start();
-      pState = sPay1;
-    }
-    else if(keypad_key.getKey()=='2'){
-      hours12=1;
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("2 HOUR");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sPay1;
+  }
+  else if(keypad_key.getKey()=='2'){
+    hours12=1;
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("2 HOUR");
 //      delay(500); 
 //      PAY1();
-      timer3.interval(500);
-      timer3.start();
-      pState = sPay1;
-    }
-    else if(keypad_key.getKey()=='0'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("RETURN");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sPay1;
+  }
+  else if(keypad_key.getKey()=='0'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("RETURN");
 //      delay(500); 
 //      LOGIN();
-      timer3.interval(500);
-      timer3.start();
-      pState = sLogin;
-    }
-    updateTicker();
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sMainMenuDisplay;
   }
 }
 
 void HR2(){
-  lcd.clear();
-  lcd.setCursor(3,0);
-  lcd.print("PLEASE CHOOSE");
-  lcd.setCursor(0,1);
-  lcd.print("THE NUMBER OF HOURS");
-  lcd.setCursor(7,2);
-  lcd.print("1 OR 2");
-  lcd.setCursor(1,3);
-  lcd.print("PRESS 0 TO RETURN");
-  while(1){
-    if(keypad_key.getKey()=='1'){
-      hours21=1;
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("1 HOUR");
+  if(keypad_key.getKey()=='1'){
+    hours21=1;
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("1 HOUR");
 //      delay(500); 
 //      PAY2();
-      timer3.interval(500);
-      timer3.start();
-      pState = sPay2;
-    }
-    else if(keypad_key.getKey()=='2'){
-      hours22=1;
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("2 HOUR");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sPay2;
+  }
+  else if(keypad_key.getKey()=='2'){
+    hours22=1;
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("2 HOUR");
 //      delay(500); 
 //      PAY2();
-      timer3.interval(500);
-      timer3.start();
-      pState = sPay2;
-    }
-    else if(keypad_key.getKey()=='0'){
-      lcd.clear();
-      lcd.setCursor(7,1);
-      lcd.print("RETURN");
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sPay2;
+  }
+  else if(keypad_key.getKey()=='0'){
+    lcd.clear();
+    lcd.setCursor(7,1);
+    lcd.print("RETURN");
 //      delay(500); 
 //      LOGIN();
-      timer3.interval(500);
-      timer3.start();
-      pState = sLogin;
-    }
-    updateTicker();
-  }
+    timer3.interval(500);
+    timer3.start();
+    pState = sDelay;
+    nextState = sMainMenuDisplay;
+  } 
 }
 
 void PAY1(){
