@@ -10,6 +10,8 @@ int relay2=11;
 int buzzer=13;
 bool r1;
 bool r2;
+bool z1;
+bool z2;
 
 char outpass1[4];
 char inpass1[4];
@@ -84,9 +86,30 @@ void setup(){
   Serial.println("setup..");
   
   lcd.begin(20,4);
-  pinMode(buzzer,OUTPUT); 
+  pinMode(buzzer,OUTPUT);
   pinMode(relay1,OUTPUT);
   pinMode(relay2,OUTPUT);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+
+  #ifdef DEBUG
+    EEPROM.write(3, 0);
+    EEPROM.write(4, 0);
+  #endif
+      
+  z1=0;
+  z2=0;
+
+  r1=EEPROM.read(3);
+  if(r1==1){
+    digitalWrite(relay1,LOW);
+    z1=1;
+  }
+  r2=EEPROM.read(4);
+  if(r2==1){
+    digitalWrite(relay2,LOW);
+    z2=1;
+  }
 
   cpass1 = EEPROM.read(1);
   if (cpass1==1) {
@@ -104,7 +127,6 @@ void setup(){
       a1++;
     }
   }
-  
 //  START1(); 
 }
 
@@ -153,14 +175,14 @@ void processTask() {
     case sSelectSlotWaitKeyPress: LOGIN_WAIT(); break;
     case sInbox1: INBOX1(); break;
     case sInbox2: INBOX2(); break;
-    case sHr1Display: HR_DISPLAY(); pState = sHr1; break;
-    case sHr2Display: HR_DISPLAY(); pState = sHr2; break;
+    case sHr1Display: HR_DISPLAY(); Serial.println("sHr1Display"); pState = sHr1; break;
+    case sHr2Display: HR_DISPLAY(); Serial.println("sHr2Display"); pState = sHr2; break;
     case sHr1: HR1(); break;
     case sHr2: HR2(); break;
     case sPay1: PAY1(); break;  
     case sPay2: PAY2(); break;
-    case sEnterPassword1: enterPassword(); passCount=0; pState = sInpass1; break;
-    case sEnterPassword2: enterPassword(); passCount=0; pState = sInpass2; break;
+    case sEnterPassword1: enterPassword(); passCount=0; pState = sInpass1; Serial.println("sEnterPassword1"); break;
+    case sEnterPassword2: enterPassword(); passCount=0; pState = sInpass2; Serial.println("sEnterPassword2"); break;
     case sInpass1: INPASS1(); break;
     case sInpass2: INPASS2(); break;
     case sEnterPassword1Again: enterPasswordAgain(); passCount=0; pState = sInpass1Again; break;
@@ -170,11 +192,13 @@ void processTask() {
     case sInpass1cmp: INPASS1cmp(); break;
     case sInpass2cmp: INPASS2cmp(); break;
     case sIntoTheBox1: 
+      Serial.println("sIntoTheBox1");
       intoTheBox(); 
       timer3.interval(2000); timer3.start(); pState = sDelay;
       nextState = sLock1;
       break;
     case sIntoTheBox2: 
+      Serial.println("sIntoTheBox2");
       intoTheBox(); 
       timer3.interval(2000); timer3.start(); pState = sDelay;
       nextState = sLock2;
@@ -212,7 +236,7 @@ void delayTime() {
 }
 
 void OUTPASS_DIS(){
-  Serial.println("OUTPASS_DIS");
+  Serial.println("OUTPASS_DIS: ENTER PASSWORD");
  lcd.clear();
  lcd.setCursor(3,1);
  lcd.print("ENTER PASSWORD");
@@ -220,9 +244,16 @@ void OUTPASS_DIS(){
 }
 
 void OUTPASS1(){
-  key_pressed1=keypad_key.getKey();
-  if(key_pressed1){
-    outpass1[i1++]=key_pressed1;
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if(keypad_key_getKey){
+    outpass1[i1++]=keypad_key_getKey;
     lcd.print("*");
     if (i1==4) {
 //      delay(200);
@@ -258,9 +289,16 @@ void OUTPASS1(){
 
 
 void OUTPASS2(){
-  key_pressed2=keypad_key.getKey();
-  if(key_pressed2){
-    outpass2[i2++]=key_pressed2;
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if(keypad_key_getKey){
+    outpass2[i2++]=keypad_key_getKey;
     lcd.print("*");
     if (i2==4) {
 //      delay(200);
@@ -295,7 +333,7 @@ void OUTPASS2(){
 }
 
 void START1(){
-  Serial.println("START1");
+  Serial.println("START1: PRESS ANY TO START");
   lcd.clear();
   lcd.setCursor(5,0);  
   lcd.print(":WELCOME:");
@@ -308,7 +346,7 @@ void START1(){
 }
 
 void START2(){
-  Serial.println("START2");
+  Serial.println("START2: LOGIN, LOGOUT, RETURN");
   lcd.clear();
   lcd.setCursor(2,0);
   lcd.print("PRESS 1 TO LOGIN");
@@ -357,7 +395,7 @@ void START2_WAIT(){
 }
 
 void LOGIN(){
-  Serial.println("LOGIN");
+  Serial.println("LOGIN: CHOOSE EMPTY SLOT");
   lcd.clear();
   lcd.setCursor(1,1);
   lcd.print("CHOOSE EMPTY SLOT");
@@ -408,7 +446,7 @@ void LOGIN_WAIT(){
 
 void INBOX1(){
   lcd.clear();
-  if(r1==0){
+  if(z1==1){
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
 //    delay(1000);
@@ -418,7 +456,7 @@ void INBOX1(){
     pState = sDelay;
     nextState = sMainMenuDisplay;
   }
-  else if(r1==1){
+  else if(z1==0){
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
 //    delay(1000);
@@ -432,7 +470,7 @@ void INBOX1(){
   
 void INBOX2(){
   lcd.clear();
-  if(r2==0){
+  if(z2==1){
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
 //    delay(1000);
@@ -442,7 +480,7 @@ void INBOX2(){
     pState = sDelay;
     nextState = sMainMenuDisplay;
   }
-  else if(r2==1){
+  else if(z2==0){
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
 //    delay(1000);
@@ -455,7 +493,7 @@ void INBOX2(){
 }
 
 void HR_DISPLAY(){
-  Serial.println("HR_DISPLAY");
+  Serial.println("HR_DISPLAY: THE NUMBER OF HOURS (1 OR 2)");
   lcd.clear();
   lcd.setCursor(3,0);
   lcd.print("PLEASE CHOOSE");
@@ -468,7 +506,15 @@ void HR_DISPLAY(){
 }
 
 void HR1(){
-  if(keypad_key.getKey()=='1'){
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if(keypad_key_getKey=='1'){
     hours11=1;
     lcd.clear();
     lcd.setCursor(7,1);
@@ -480,7 +526,7 @@ void HR1(){
     pState = sDelay;
     nextState = sPay1;
   }
-  else if(keypad_key.getKey()=='2'){
+  else if(keypad_key_getKey=='2'){
     hours12=1;
     lcd.clear();
     lcd.setCursor(7,1);
@@ -492,7 +538,7 @@ void HR1(){
     pState = sDelay;
     nextState = sPay1;
   }
-  else if(keypad_key.getKey()=='0'){
+  else if(keypad_key_getKey=='0'){
     lcd.clear();
     lcd.setCursor(7,1);
     lcd.print("RETURN");
@@ -506,7 +552,15 @@ void HR1(){
 }
 
 void HR2(){
-  if(keypad_key.getKey()=='1'){
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if(keypad_key_getKey=='1'){
     hours21=1;
     lcd.clear();
     lcd.setCursor(7,1);
@@ -518,7 +572,7 @@ void HR2(){
     pState = sDelay;
     nextState = sPay2;
   }
-  else if(keypad_key.getKey()=='2'){
+  else if(keypad_key_getKey=='2'){
     hours22=1;
     lcd.clear();
     lcd.setCursor(7,1);
@@ -530,7 +584,7 @@ void HR2(){
     pState = sDelay;
     nextState = sPay2;
   }
-  else if(keypad_key.getKey()=='0'){
+  else if(keypad_key_getKey=='0'){
     lcd.clear();
     lcd.setCursor(7,1);
     lcd.print("RETURN");
@@ -544,9 +598,9 @@ void HR2(){
 }
 
 void PAY1(){
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("TID WAI GON1");
+//  lcd.clear();
+//  lcd.setCursor(0,0);
+//  lcd.print("TID WAI GON1");
 //  delay(500);
   if(hours11==1){
     lcd.clear();
@@ -568,9 +622,9 @@ void PAY1(){
 }
 
 void PAY2(){
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("TID WAI GON2");
+//  lcd.clear();
+//  lcd.setCursor(0,0);
+//  lcd.print("TID WAI GON2");
 //  delay(500);
   if(hours21==1){
     lcd.clear();
@@ -588,7 +642,7 @@ void PAY2(){
   timer3.interval(500);
   timer3.start();
   pState = sDelay;
-  nextState = sEnterPassword1;
+  nextState = sEnterPassword2;
 }
 
 void enterPassword(){
@@ -608,7 +662,7 @@ void enterPasswordAgain(){
 }
 
 void intoTheBox(){
-  Serial.println("intoTheBox");
+  Serial.println("intoTheBox: PLEASE PUT YOUR ITEM");
   lcd.setCursor(0,0);
   lcd.print("PLEASE PUT YOUR ITEM");
   lcd.setCursor(4,1);
@@ -620,12 +674,19 @@ void intoTheBox(){
 }
 
 void INPASS1(){
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
   int a1=passCount+10;
-  char key1=keypad_key.getKey();
-  if (key1){
-    inpass1[passCount]=key1;
+  if (keypad_key_getKey){
+    inpass1[passCount]=keypad_key_getKey;
     lcd.print("*");
-    EEPROM.write(a1,key1);
+    EEPROM.write(a1,keypad_key_getKey);
     if(++passCount >= 4) {
       timer3.interval(500); timer3.start(); pState = sDelay;
       nextState = sEnterPassword1Again;
@@ -634,9 +695,16 @@ void INPASS1(){
 }
 
 void INPASS1Again(){
-  char key2=keypad_key.getKey();
-  if (key2){ 
-    inpass1x[passCount]=key2;
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+   if (keypad_key_getKey){ 
+    inpass1x[passCount]=keypad_key_getKey;
     lcd.print("*");
     if(++passCount >= 4) {
       timer3.interval(500); timer3.start(); pState = sDelay;
@@ -668,12 +736,19 @@ void INPASS1cmp(){
 }
 
 void INPASS2(){
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
   int a1=passCount+20;
-  char key1=keypad_key.getKey();
-  if (key1){
-    inpass2[passCount]=key1;
+  if (keypad_key_getKey){
+    inpass2[passCount]=keypad_key_getKey;
     lcd.print("*");
-    EEPROM.write(a1,key1);
+    EEPROM.write(a1,keypad_key_getKey);
     if(++passCount >= 4) {
       timer3.interval(500); timer3.start(); pState = sDelay;
       nextState = sEnterPassword2Again;
@@ -682,9 +757,16 @@ void INPASS2(){
 }
 
 void INPASS2Again(){
-  char key2=keypad_key.getKey();
-  if (key2){ 
-    inpass2x[passCount]=key2;
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if (keypad_key_getKey){ 
+    inpass2x[passCount]=keypad_key_getKey;
     lcd.print("*");
     if(++passCount >= 4) {
       timer3.interval(500); timer3.start(); pState = sDelay;
@@ -716,7 +798,7 @@ void INPASS2cmp(){
 }
 
 void LOGOUT_DIS(){
-  Serial.println("LOGOUT_DIS");
+  Serial.println("LOGOUT_DIS: CHOOSE YOUR SLOT");
   lcd.clear();
   lcd.setCursor(2,1);
   lcd.print("CHOOSE YOUR SLOT");
@@ -725,7 +807,15 @@ void LOGOUT_DIS(){
 }
 
 void LOGOUT(){  
-  if(keypad_key.getKey()=='1'){
+  char keypad_key_getKey = keypad_key.getKey();
+  #ifdef DEBUG
+    if(Serial.available() > 0) { 
+      char inChar = Serial.read(); 
+      Serial.println(inChar);
+      keypad_key_getKey = inChar;
+    }
+  #endif
+  if(keypad_key_getKey=='1'){
     lcd.clear();
     lcd.setCursor(7,1);
     lcd.print("BOX1");
@@ -734,7 +824,7 @@ void LOGOUT(){
     timer3.interval(500); timer3.start(); pState = sDelay;
     nextState = sOutBox1;
   }
-  else if(keypad_key.getKey()=='2'){
+  else if(keypad_key_getKey=='2'){
     lcd.clear();
     lcd.setCursor(7,1);
     lcd.print("BOX2");
@@ -743,7 +833,7 @@ void LOGOUT(){
     timer3.interval(500); timer3.start(); pState = sDelay;
     nextState = sOutBox2;
   }
-  else if(keypad_key.getKey()=='0'){
+  else if(keypad_key_getKey=='0'){
     lcd.clear();
     lcd.setCursor(7,1);
     lcd.print("RETURN");
@@ -756,7 +846,7 @@ void LOGOUT(){
 
 void OUTBOX1() {
   lcd.clear();
-  if(r1==1) {
+  if(z1==0) {
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
 //    delay(1000) ;
@@ -764,7 +854,7 @@ void OUTBOX1() {
     timer3.interval(1000); timer3.start(); pState = sDelay;
     nextState = sLogoutDis;
   }
-  else if (r1==0) {
+  else if (z1==1) {
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
 //    delay(1000);
@@ -776,7 +866,7 @@ void OUTBOX1() {
 
 void OUTBOX2() {
   lcd.clear();
-  if(r2==1) {
+  if(z2==0) {
     lcd.setCursor(3,1);
     lcd.print("NOT AVAILABLE");
 //    delay(1000) ;
@@ -784,7 +874,7 @@ void OUTBOX2() {
     timer3.interval(1000); timer3.start(); pState = sDelay;
     nextState = sLogoutDis;
   }
-  else if(r2==0) {
+  else if(z2==1) {
     lcd.setCursor(5,1);
     lcd.print("AVAILABLE");
 //    delay(1000);
@@ -797,7 +887,8 @@ void OUTBOX2() {
 void LOCK1(){
   Serial.println("LOCK1");
   digitalWrite(10,LOW);
-  r1=0;
+  r1=1;
+  z1=1;
   EEPROM.write(3, r1);
   lcd.clear();
   lcd.setCursor(5,1);
@@ -811,7 +902,8 @@ void LOCK1(){
 void LOCK2(){
   Serial.println("LOCK2");
   digitalWrite(11,LOW);
-  r2=0;
+  r2=1;
+  z2=1;
   lcd.clear();
   lcd.setCursor(5,1);
   lcd.print("THANK YOU");
@@ -824,7 +916,8 @@ void LOCK2(){
 void UNLOCK1(){
   Serial.println("UNLOCK1");
   digitalWrite(10,HIGH);
-  r1=1;
+  r1=0;
+  z1=0;
   EEPROM.write(4, r2);
   lcd.clear();
   lcd.setCursor(5,1);
@@ -840,6 +933,7 @@ void UNLOCK2(){
   Serial.println("UNLOCK2");
   digitalWrite(11,HIGH);
   r2=1;
+  z2=1;
   lcd.clear();
   lcd.setCursor(5,1);
   lcd.print("THANK YOU");
