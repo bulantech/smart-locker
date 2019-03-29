@@ -897,6 +897,7 @@ void LOCK1(){
 //  START1();
   timer3.interval(1000); timer3.start(); pState = sDelay;
   nextState = sHomeDisplay;
+  timer1.start();
 }
 
 void LOCK2(){
@@ -911,6 +912,7 @@ void LOCK2(){
 //  START1();
   timer3.interval(1000); timer3.start(); pState = sDelay;
   nextState = sHomeDisplay;
+  timer2.start();
 }
 
 void UNLOCK1(){
@@ -927,6 +929,13 @@ void UNLOCK1(){
   cpass1=0;
   timer3.interval(1000); timer3.start(); pState = sDelay;
   nextState = sHomeDisplay;
+
+  int secCount = timer1.counter();
+  int hh = secCount/(60*60);
+  int mm = (secCount - (hh*60))/(60);
+  int ss = secCount%60;
+  Serial.println(String(hh)+":"+String(mm)+":"+String(ss));
+  timer1.stop();
 }
 
 void UNLOCK2(){
@@ -942,4 +951,11 @@ void UNLOCK2(){
   cpass2=0;
   timer3.interval(1000); timer3.start(); pState = sDelay;
   nextState = sHomeDisplay;
+  
+  int secCount = timer2.counter();
+  int hh = secCount/(60*60);
+  int mm = (secCount - (hh*60))/(60);
+  int ss = secCount%60;
+  Serial.println(String(hh)+":"+String(mm)+":"+String(ss));
+  timer2.stop();
 }
