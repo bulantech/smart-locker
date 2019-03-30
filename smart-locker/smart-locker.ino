@@ -931,8 +931,9 @@ void UNLOCK1(){
   nextState = sHomeDisplay;
 
   int secCount = timer1.counter();
+//  secCount = 7515; //test
   int hh = secCount/(60*60);
-  int mm = (secCount - (hh*60))/(60);
+  int mm = (secCount - (hh*60*60))/(60);
   int ss = secCount%60;
   Serial.println(String(hh)+":"+String(mm)+":"+String(ss));
   timer1.stop();
@@ -954,7 +955,7 @@ void UNLOCK2(){
   
   int secCount = timer2.counter();
   int hh = secCount/(60*60);
-  int mm = (secCount - (hh*60))/(60);
+  int mm = (secCount - (hh*60*60))/(60);
   int ss = secCount%60;
   Serial.println(String(hh)+":"+String(mm)+":"+String(ss));
   timer2.stop();
